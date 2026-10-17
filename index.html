@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="GENOMICON: an interactive genetics game with Punnett squares, gene editing and phenotype ratios.">
+  <meta name="theme-color" content="#ffffff">
+  <title>Genomicon - Your First Book About Genome!</title>
+  <style>
+    * {box-sizing:border-box}
+    html,body {margin:0;min-height:100%;background:#fff;font-family:Arial,sans-serif}
+    body {min-height:100vh;min-height:100svh;display:flex;justify-content:center;align-items:center;padding:12px}
+    #game-shell {--scale:1;position:relative;width:900px;max-width:100%;aspect-ratio:3/2;overflow:hidden;flex-shrink:0;background:#fff}
+    #game {display:block;width:100%;height:100%;touch-action:manipulation}
+    #game-buttons {position:absolute;inset:0;pointer-events:none;overflow:hidden}
+    .game-control {position:absolute;display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:transparent;pointer-events:auto;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .game-control:focus {outline:none}
+    .game-control:focus-visible {outline:2px solid #000;outline-offset:-3px}
+    #ratio-input {position:absolute;z-index:2;margin:0;padding:calc(5px * var(--scale));border:0;border-radius:0;outline:0;background:transparent;color:#000;caret-color:#000;font:calc(24px * var(--scale))/1.2 Arial,sans-serif;min-width:0}
+    #ratio-input:focus-visible {outline:2px solid #000;outline-offset:-2px}
+    #ratio-input[hidden] {display:none}
+    .sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    noscript {max-width:600px;line-height:1.5}
+    @media (max-height:625px) and (min-width:700px) {#game-shell{width:min(900px,calc((100svh - 24px) * 1.5))}}
+  </style>
+</head>
+<body>
+  <main id="game-shell" aria-label="GENOMICON genetics game">
+    <h1 class="sr-only">GENOMICON — Your First Book About Genome!</h1>
+    <canvas id="game" width="900" height="600" role="img" aria-label="GENOMICON main menu">Your browser needs HTML Canvas support to display the game.</canvas>
+    <div id="game-buttons" aria-label="Game controls"></div>
+    <input id="ratio-input" type="text" aria-label="Phenotype ratio" autocomplete="off" spellcheck="false" autocapitalize="off" hidden disabled>
+    <p id="game-status" class="sr-only" role="status" aria-live="polite"></p>
+    <noscript>Please enable JavaScript to play GENOMICON.</noscript>
+  </main>
+  <script id="genomicon-engine">
+(function (root) {
+  'use strict';
+  const DATA = {"intro_slides_map":{"level1":[{"type":"text","content":"Welcome to Genomicon!"},{"type":"text","content":"Explore how genes determine traits."},{"type":"text","content":"Let's get started!"},{"type":"text","content":"1. The Punnett Square"},{"type":"text","content":"I would like you to first think of a question."},{"type":"text","content":"Where do your characteristics come from?"},{"type":"text","content":"The answer is simple."},{"type":"text","content":"Although environment also affects our phenotype,"},{"type":"text","content":"Many traits are inherited from our parents."},{"type":"text","content":"A Punnett square is a tool"},{"type":"text","content":"for predicting offspring genotypes and phenotypes."},{"type":"text","content":"Let me give you an example."},{"type":"image","content":"assets/1.png"},{"type":"image","content":"assets/2.png"},{"type":"image","content":"assets/3.png"},{"type":"image","content":"assets/4.png"},{"type":"image","content":"assets/5.png"},{"type":"image","content":"assets/6.png"},{"type":"image","content":"assets/7.png"},{"type":"image","content":"assets/8.png"},{"type":"image","content":"assets/9.png"},{"type":"image","content":"assets/10.png"},{"type":"image","content":"assets/11.png"},{"type":"image","content":"assets/12.png"},{"type":"image","content":"assets/13.png"},{"type":"image","content":"assets/14.png"},{"type":"image","content":"assets/15.png"},{"type":"image","content":"assets/16.png"},{"type":"image","content":"assets/17.png"},{"type":"image","content":"assets/18.png"},{"type":"image","content":"assets/19.png"},{"type":"image","content":"assets/20.png"},{"type":"image","content":"assets/21.png"},{"type":"image","content":"assets/22.png"},{"type":"image","content":"assets/23.png"},{"type":"image","content":"assets/24.png"},{"type":"image","content":"assets/25.png"},{"type":"image","content":"assets/26.png"},{"type":"image","content":"assets/27.png"},{"type":"image","content":"assets/28.png"},{"type":"text","content":"Blue fur is dominant; red fur is recessive."}],"level2":[{"type":"text","content":"Welcome to the Gene Editing Lab."},{"type":"text","content":"In this level, you will simulate editing DNA!"},{"type":"image","content":"assets/1_1.png"},{"type":"image","content":"assets/2_2.png"},{"type":"image","content":"assets/3_2.png"},{"type":"image","content":"assets/4_1.png"},{"type":"image","content":"assets/5_1.png"},{"type":"image","content":"assets/6_1.png"},{"type":"image","content":"assets/7_1.png"},{"type":"image","content":"assets/8_1.png"},{"type":"image","content":"assets/9_1.png"},{"type":"image","content":"assets/10_1.png"},{"type":"image","content":"assets/11_1.png"},{"type":"image","content":"assets/12_1.png"},{"type":"text","content":"Now it's your turn!"},{"type":"text","content":"Use the buttons, then explain each step to a friend."}]},"library_sections":{"DNA & Genes":{"Gene":"A segment of DNA that codes for a specific protein.","DNA":"Carries genetic instructions in living organisms.","Chromosome":"Tightly coiled DNA and proteins, carrying genetic information.","Nucleotide":"The basic building block of DNA.","Double Helix":"The twisted-ladder structure of DNA.","Genome":"The complete set of genetic material in an organism."},"Inheritance":{"Dominant":"Dominant alleles mask recessive alleles in this model.","Recessive":"A recessive trait appears when both alleles are recessive.","Punnett Square":"A diagram predicting the probability of offspring genotypes."},"Gene Editing & Evolution":{"CRISPR":"A revolutionary gene-editing tool that allows DNA modifications.","Mutation":"A permanent alteration in the DNA sequence.","Natural Selection":"Advantageous traits become common."}},"milestone_texts":{"Level 1":"I understand how a Punnett square works.","Level 2":"I understand how gene editing works.","Level 3":"I understand how to analyze ratios."}};
+  const LEVELS = ['Level 1', 'Level 2', 'Level 3'];
+  const rect = (x, y, w, h) => ({x, y, w, h});
+  const hit = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+  const B = {
+    main: {
+      'New Game': rect(50, 500, 150, 50), Library: rect(250, 500, 150, 50),
+      Gallery: rect(450, 500, 150, 50), Milestone: rect(650, 500, 150, 50)
+    },
+    levels: {'Level 1': rect(400, 200, 150, 50), 'Level 2': rect(400, 270, 150, 50), 'Level 3': rect(400, 340, 150, 50)},
+    skip: rect(750, 20, 100, 40),
+    level1back: rect(400, 520, 150, 40),
+    dna: rect(300, 200, 300, 60), insert: rect(300, 300, 300, 60),
+    level2back: rect(400, 500, 150, 40), slideback: rect(750, 20, 120, 40),
+    input: rect(350, 400, 200, 40), submit: rect(250, 500, 150, 50),
+    level3back: rect(450, 500, 150, 50), galleryback: rect(400, 520, 100, 40),
+    prev: rect(100, 520, 100, 40), next: rect(700, 520, 100, 40),
+    libraryback: rect(760, 550, 120, 40), milestoneback: rect(750, 520, 100, 40)
+  };
+  const success = 'Congratulations! Your ratio is correct!';
+  const answer = '9:3:3:1';
+
+  function createState() {
+    return {
+      current_screen: 'main', selected_p1: null, selected_p2: null,
+      genotypes: null, phenotypes: null, gene_cut: false, gene_inserted: false,
+      show_level2_slide: null, in_slideshow: false, slideshow_index: null,
+      current_slide_index: 0, current_level_target: null,
+      user_input: ' ', feedback_message: ' ', active_input: false,
+      expanded_sections: Object.fromEntries(Object.keys(DATA.library_sections).map(k => [k, false])),
+      milestone_status: Object.fromEntries(LEVELS.map(k => [k, false])),
+      milestone_selected: null, level_select_back: rect(400, 420, 150, 40)
+    };
+  }
+
+  function punnettSquare(parent1, parent2) {
+    const genotypes = {};
+    for (const a of parent1) {
+      for (const b of parent2) {
+        const child = [a, b].sort().join('');
+        genotypes[child] = (genotypes[child] || 0) + 1;
+      }
+    }
+    const phenotypes = {'Blue Fur': 0, 'Red Fur': genotypes.bb || 0};
+    for (const [child, count] of Object.entries(genotypes)) {
+      if (child.includes('B')) phenotypes['Blue Fur'] += count;
+    }
+    return {genotypes, phenotypes};
+  }
+
+  function libraryRows(s) {
+    let y = 80;
+    return Object.entries(DATA.library_sections).map(([section, terms]) => {
+      const row = {section, terms, y, rect: rect(50, y, 300, 30)};
+      y += 50 + (s.expanded_sections[section] ? Object.keys(terms).length * 30 : 0);
+      return row;
+    });
+  }
+
+  function controls(s) {
+    const out = [];
+    const add = (id, label, r) => out.push({id, label, rect: r});
+    switch (s.current_screen) {
+      case 'main':
+        for (const [label, r] of Object.entries(B.main)) add(label, label, r);
+        break;
+      case 'new_game':
+        for (const [label, r] of Object.entries(B.levels)) add(label, label, r);
+        add('Back', 'Back', s.level_select_back);
+        break;
+      case 'intro':
+        add('Continue', 'Continue to the next introduction slide', rect(0, 0, 900, 600));
+        add('Skip', 'Skip introduction', B.skip);
+        break;
+      case 'level1':
+        for (let i = 0; i < 3; i++) {
+          const allele = ['BB', 'Bb', 'bb'][i];
+          add('P1_' + allele, 'Parent 1: ' + allele, rect(100, 100 + i * 60, 100, 40));
+          add('P2_' + allele, 'Parent 2: ' + allele, rect(700, 100 + i * 60, 100, 40));
+        }
+        add('Back', 'Back', B.level1back);
+        break;
+      case 'level2':
+        if (s.show_level2_slide === 'slide1' || s.show_level2_slide === 'slide2') {
+          add('SlideBack', 'Back to gene-editing simulation', B.slideback);
+        } else {
+          add('DNA', 'Original DNA', B.dna);
+          if (s.gene_cut) add('Insert', 'Insert Gene Here', B.insert);
+          add('Back', 'Back', B.level2back);
+        }
+        break;
+      case 'level3':
+        add('Submit', 'Submit ratio', B.submit);
+        add('Back', 'Back', B.level3back);
+        break;
+      case 'library':
+        for (const row of libraryRows(s)) add(row.section, 'Toggle ' + row.section, row.rect);
+        // Retain the original shared Back-rectangle behavior.
+        s.level_select_back = {...B.libraryback};
+        add('Back', 'Back', B.libraryback);
+        break;
+      case 'gallery':
+        if (s.in_slideshow) {
+          add('SlidePrev', 'Previous image', B.prev);
+          add('SlideNext', 'Next image', B.next);
+          add('SlideBack', 'Back to gallery', B.galleryback);
+        } else {
+          for (let i = 0; i < 16; i++) add('Thumb_' + i, 'Open gallery image ' + (i + 1), rect(70 + i % 4 * 190, 80 + Math.floor(i / 4) * 140, 150, 100));
+          add('GalleryBack', 'Back', B.galleryback);
+        }
+        break;
+      case 'milestone':
+        LEVELS.forEach((level, i) => {
+          add(level, level, rect(100 + i * 250, 420, 200, 50));
+          add('Check_' + level, 'Toggle ' + level + ' milestone', rect(160 + i * 250, 500, 20, 20));
+        });
+        s.level_select_back = {...B.milestoneback};
+        add('Back', 'Back', B.milestoneback);
+        break;
+    }
+    return out;
+  }
+
+  function click(s, x, y) {
+    const buttons = controls(s);
+    const pressed = id => buttons.some(b => b.id === id && hit(b.rect, x, y));
+    switch (s.current_screen) {
+      case 'main':
+        for (const [label, r] of Object.entries(B.main)) {
+          if (hit(r, x, y)) s.current_screen = label === 'New Game' ? 'new_game' : label.toLowerCase();
+        }
+        break;
+      case 'new_game':
+        for (const [label, r] of Object.entries({...B.levels, Back: s.level_select_back})) {
+          if (!hit(r, x, y)) continue;
+          if (label === 'Back') s.current_screen = 'main';
+          else {
+            s.current_level_target = label.toLowerCase().replace(' ', '');
+            s.current_slide_index = 0;
+            s.current_screen = DATA.intro_slides_map[s.current_level_target] ? 'intro' : s.current_level_target;
+          }
+        }
+        break;
+      case 'intro': {
+        const slides = DATA.intro_slides_map[s.current_level_target];
+        if (hit(B.skip, x, y) || s.current_slide_index >= slides.length - 1) {
+          s.current_screen = s.current_level_target;
+          s.current_slide_index = 0;
+        } else s.current_slide_index++;
+        break;
+      }
+      case 'level1':
+        for (const b of buttons) {
+          if (!hit(b.rect, x, y)) continue;
+          if (b.id.startsWith('P1_')) s.selected_p1 = b.id.split('_')[1];
+          else if (b.id.startsWith('P2_')) s.selected_p2 = b.id.split('_')[1];
+          else if (b.id === 'Back') {
+            s.current_screen = 'main';
+            s.selected_p1 = s.selected_p2 = null;
+            s.genotypes = s.phenotypes = null;
+          }
+        }
+        if (s.selected_p1 && s.selected_p2) Object.assign(s, punnettSquare(s.selected_p1, s.selected_p2));
+        break;
+      case 'level2':
+        if (s.show_level2_slide === 'slide1') {
+          if (pressed('SlideBack')) {s.show_level2_slide = null; s.gene_cut = true;}
+        } else if (s.show_level2_slide === 'slide2') {
+          if (pressed('SlideBack')) {s.show_level2_slide = null; s.gene_inserted = true;}
+        } else if (pressed('DNA') && !s.gene_cut) s.show_level2_slide = 'slide1';
+        else if (pressed('Insert') && s.gene_cut && !s.gene_inserted) s.show_level2_slide = 'slide2';
+        else if (pressed('Back')) {
+          s.current_screen = 'main'; s.gene_cut = false; s.gene_inserted = false; s.show_level2_slide = false;
+        }
+        break;
+      case 'level3':
+        s.active_input = hit(B.input, x, y);
+        if (pressed('Submit')) s.feedback_message = s.user_input === answer ? success : 'Try Again!';
+        else if (pressed('Back')) {
+          s.current_screen = 'main'; s.user_input = ''; s.feedback_message = ''; s.active_input = false;
+        }
+        break;
+      case 'library':
+        for (const row of libraryRows(s)) {
+          if (hit(row.rect, x, y)) s.expanded_sections[row.section] = !s.expanded_sections[row.section];
+        }
+        if (hit(s.level_select_back, x, y)) s.current_screen = 'main';
+        break;
+      case 'gallery':
+        if (s.in_slideshow) {
+          if (pressed('SlidePrev')) s.slideshow_index = (s.slideshow_index + 15) % 16;
+          else if (pressed('SlideNext')) s.slideshow_index = (s.slideshow_index + 1) % 16;
+          else if (pressed('SlideBack')) s.in_slideshow = false;
+        } else {
+          for (const b of buttons) {
+            if (b.id.startsWith('Thumb_') && hit(b.rect, x, y)) {
+              s.slideshow_index = Number(b.id.split('_')[1]); s.in_slideshow = true;
+            }
+          }
+          if (pressed('GalleryBack')) s.current_screen = 'main';
+        }
+        break;
+      case 'milestone':
+        LEVELS.forEach((level, i) => {
+          if (hit(rect(100 + i * 250, 420, 200, 50), x, y)) s.milestone_selected = level;
+          if (hit(rect(160 + i * 250, 500, 20, 20), x, y)) s.milestone_status[level] = !s.milestone_status[level];
+        });
+        if (hit(s.level_select_back, x, y)) s.current_screen = 'main';
+        break;
+    }
+    return s;
+  }
+
+  function key(s, keyName, unicode = '') {
+    if (s.current_screen !== 'level3' || !s.active_input) return s;
+    if (keyName === 'Enter') s.feedback_message = s.user_input.trim() === answer ? success : 'Try Again!';
+    else if (keyName === 'Backspace') s.user_input = s.user_input.slice(0, -1);
+    else s.user_input += unicode;
+    return s;
+  }
+
+  root.GENOMICON_ENGINE = {DATA, B, LEVELS, answer, success, hit, rect, createState, punnettSquare, controls, libraryRows, click, key};
+})(globalThis);
+
+  </script>
+  <script id="genomicon-interface">
+(function () {
+  'use strict';
+  const E = globalThis.GENOMICON_ENGINE;
+  const state = E.createState();
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const shell = document.getElementById('game-shell');
+  const buttons = document.getElementById('game-buttons');
+  const input = document.getElementById('ratio-input');
+  const live = document.getElementById('game-status');
+  const WHITE = '#fff', BLACK = '#000', BLUE = 'rgb(100,200,255)', GRAY = 'rgb(150,150,150)';
+  const cache = new Map();
+  let scheduled = false;
+  let lastScreen = '';
+  let lastFeedback = '';
+
+  function scheduleDraw() {
+    if (!scheduled) {
+      scheduled = true;
+      requestAnimationFrame(() => {scheduled = false; draw();});
+    }
+  }
+
+  function image(path, r) {
+    let entry = cache.get(path);
+    if (!entry) {
+      const img = new Image();
+      entry = {img, status: 'loading'};
+      cache.set(path, entry);
+      img.onload = () => {entry.status = 'ready'; scheduleDraw();};
+      img.onerror = () => {entry.status = 'missing'; scheduleDraw();};
+      // Relative URLs keep the file portable across GitHub project repositories.
+      img.src = path;
+    }
+    if (entry.status === 'ready') {
+      ctx.drawImage(entry.img, r.x, r.y, r.w, r.h);
+    } else {
+      ctx.fillStyle = WHITE;
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.strokeStyle = '#d7d7d7'; ctx.lineWidth = 1;
+      ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+      const message = entry.status === 'loading' ? 'Loading image…' : 'Image unavailable';
+      centerText(message, r.x + r.w / 2, r.y + r.h / 2 - 12, '#777', Math.min(18, r.w / 10));
+      if (entry.status === 'missing' && r.w > 250) centerText(path, r.x + r.w / 2, r.y + r.h / 2 + 14, '#777', 13);
+    }
+  }
+
+  function text(message, x, y, color = BLACK, size = 24) {
+    ctx.fillStyle = color; ctx.font = size + 'px Arial, sans-serif'; ctx.textBaseline = 'top';
+    ctx.fillText(String(message), x, y);
+  }
+
+  function centerText(message, x, y, color = BLACK, size = 24) {
+    ctx.font = size + 'px Arial, sans-serif';
+    text(message, x - ctx.measureText(String(message)).width / 2, y, color, size);
+  }
+
+  function block(r, color) {ctx.fillStyle = color; ctx.fillRect(r.x, r.y, r.w, r.h);}
+  function button(r, label, color = GRAY, dx = 10, dy = 10) {block(r, color); text(label, r.x + dx, r.y + dy);}
+
+  function drawMain() {
+    image('assets/images/gebackground.png', E.rect(0, 0, 900, 600));
+    text('Your First Book About Genome!', 250, 30);
+    for (const [label, r] of Object.entries(E.B.main)) button(r, label, WHITE, 20);
+  }
+
+  function drawLevelMenu() {
+    text('Select a Level', 340, 120);
+    for (const [label, r] of Object.entries(E.B.levels)) button(r, label, BLUE);
+    button(state.level_select_back, 'Back', BLUE);
+  }
+
+  function drawIntro() {
+    const slides = E.DATA.intro_slides_map[state.current_level_target] || [];
+    const slide = slides[state.current_slide_index];
+    if (slide) {
+      if (slide.type === 'image') image(slide.content, E.rect(0, 0, 900, 600));
+      else centerText(slide.content, 450, 288);
+      text('Click to continue...', 350, 550, GRAY);
+    }
+    button(E.B.skip, 'Skip', GRAY, 20);
+  }
+
+  function drawLevel1() {
+    text('Predicted offspring:', 300, 40);
+    ['BB', 'Bb', 'bb'].forEach((allele, i) => {
+      button(E.rect(100, 100 + i * 60, 100, 40), allele, state.selected_p1 === allele ? 'rgb(50,180,255)' : BLUE);
+      button(E.rect(700, 100 + i * 60, 100, 40), allele, state.selected_p2 === allele ? 'rgb(50,180,255)' : BLUE);
+    });
+    if (state.genotypes && state.phenotypes) {
+      let y = 300;
+      text('Results:', 350, y); y += 30;
+      for (const [g, count] of Object.entries(state.genotypes)) {text(g + ': ' + count, 350, y); y += 30;}
+      for (const [p, count] of Object.entries(state.phenotypes)) {text(p + ': ' + count, 350, y); y += 30;}
+      const blue = state.phenotypes['Blue Fur'], red = state.phenotypes['Red Fur'];
+      if (blue > 0 && red > 0) image('assets/both_fur.png', E.rect(400, 100, 140, 70));
+      else if (blue > 0) image('assets/blue_fur.png', E.rect(400, 100, 100, 100));
+      else if (red > 0) image('assets/pink_fur.png', E.rect(400, 100, 100, 100));
+    }
+    button(E.B.level1back, 'Back');
+  }
+
+  function drawLevel2() {
+    if (state.show_level2_slide === 'slide1' || state.show_level2_slide === 'slide2') {
+      image(state.show_level2_slide === 'slide1' ? 'assets/1_2.png' : 'assets/2_3.png', E.rect(50, 50, 800, 500));
+      button(E.B.slideback, 'Back', GRAY, 20);
+      return;
+    }
+    text('Level 2: Gene Editing Simulation', 250, 30);
+    text('Click Original DNA, then Insert Gene Here.', 180, 80);
+    button(E.B.dna, 'Original DNA', state.gene_cut ? GRAY : BLUE, 70, 20);
+    if (state.gene_cut) button(E.B.insert, 'Insert Gene Here', state.gene_inserted ? GRAY : BLUE, 50, 20);
+    if (state.gene_inserted) text('Simulation complete: DNA edited!', 220, 400, 'rgb(0,150,0)');
+    button(E.B.level2back, 'Back');
+  }
+
+  function drawLevel3() {
+    image('assets/level3.png', E.rect(300, 150, 300, 200));
+    text('Level 3: Solve the ratio question.', 250, 30);
+    text('Enter the phenotype ratio (e.g., 1:1:1:1).', 180, 80);
+    block(E.B.input, state.active_input ? BLUE : GRAY);
+    button(E.B.submit, 'Submit', BLUE, 60);
+    button(E.B.level3back, 'Back', BLUE, 60);
+    if (state.feedback_message) text(state.feedback_message, 250, 350, state.feedback_message.includes('Congratulations') ? 'rgb(0,150,0)' : '#f00');
+  }
+
+  function drawLibrary() {
+    text('Genetic Library', 350, 30);
+    for (const row of E.libraryRows(state)) {
+      block(row.rect, GRAY);
+      text((state.expanded_sections[row.section] ? '▼ ' : '▶ ') + row.section, 60, row.y + 5);
+      if (state.expanded_sections[row.section]) {
+        let y = row.y + 40;
+        for (const [term, definition] of Object.entries(row.terms)) {text(term + ': ' + definition, 80, y); y += 30;}
+      }
+    }
+    block(E.B.libraryback, GRAY);
+    centerText('Back', E.B.libraryback.x + E.B.libraryback.w / 2, E.B.libraryback.y + 8);
+  }
+
+  function drawGallery() {
+    text('Gallery', 370, 20);
+    if (state.in_slideshow) {
+      image('assets/gallery/' + (state.slideshow_index + 1) + '.png', E.rect(150, 100, 600, 400));
+      button(E.B.prev, 'Previous'); button(E.B.next, 'Next', GRAY, 25);
+      button(E.B.galleryback, 'Back', GRAY, 25);
+    } else {
+      for (let i = 0; i < 16; i++) image('assets/gallery/' + (i + 1) + '.png', E.rect(70 + i % 4 * 190, 80 + Math.floor(i / 4) * 140, 150, 100));
+      button(E.B.galleryback, 'Back', GRAY, 25);
+    }
+  }
+
+  function drawMilestones() {
+    text('Milestones', 370, 30);
+    E.LEVELS.forEach((level, i) => {
+      const r = E.rect(100 + i * 250, 420, 200, 50), c = E.rect(160 + i * 250, 500, 20, 20);
+      button(r, level, BLUE, 50);
+      block(c, WHITE); ctx.strokeStyle = BLACK; ctx.lineWidth = 2; ctx.strokeRect(c.x, c.y, c.w, c.h);
+      if (state.milestone_status[level]) {
+        ctx.beginPath(); ctx.lineWidth = 3;
+        ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + 20, c.y + 20);
+        ctx.moveTo(c.x + 20, c.y); ctx.lineTo(c.x, c.y + 20); ctx.stroke();
+        image('assets/medal' + (i + 1) + '.png', E.rect(r.x + 1, r.y - 320, 250, 250));
+      }
+    });
+    if (state.milestone_selected) text(E.DATA.milestone_texts[state.milestone_selected], 200, 380);
+    button(E.B.milestoneback, 'Back', GRAY, 25);
+  }
+
+  function setPosition(element, r) {
+    element.style.left = r.x / 9 + '%'; element.style.top = r.y / 6 + '%';
+    element.style.width = r.w / 9 + '%'; element.style.height = r.h / 6 + '%';
+  }
+
+  function syncControls() {
+    const oldFocus = document.activeElement && document.activeElement.dataset.control;
+    const current = E.controls(state);
+    const fragment = document.createDocumentFragment();
+    for (const control of current) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'game-control'; b.dataset.control = control.id;
+      b.setAttribute('aria-label', control.label); b.title = control.label;
+      setPosition(b, control.rect);
+      if (control.id.startsWith('P1_')) b.setAttribute('aria-pressed', String(state.selected_p1 === control.id.slice(3)));
+      if (control.id.startsWith('P2_')) b.setAttribute('aria-pressed', String(state.selected_p2 === control.id.slice(3)));
+      if (state.current_screen === 'library' && control.id !== 'Back') b.setAttribute('aria-expanded', String(state.expanded_sections[control.id]));
+      if (control.id.startsWith('Check_')) b.setAttribute('aria-pressed', String(state.milestone_status[control.id.slice(6)]));
+      b.addEventListener('click', event => {
+        if (event.detail !== 0) return; // Pointer clicks are mapped by the shell.
+        event.stopPropagation();
+        E.click(state, control.rect.x + control.rect.w / 2, control.rect.y + control.rect.h / 2);
+        draw();
+      });
+      fragment.appendChild(b);
+    }
+    buttons.replaceChildren(fragment);
+    if (oldFocus) {
+      const replacement = Array.from(buttons.children).find(b => b.dataset.control === oldFocus);
+      if (replacement) replacement.focus({preventScroll: true});
+    }
+    const level3 = state.current_screen === 'level3';
+    input.hidden = !level3;
+    input.disabled = !level3;
+    input.tabIndex = level3 ? 0 : -1;
+    if (input.value !== state.user_input) input.value = state.user_input;
+    if (level3 && state.active_input && document.activeElement !== input) input.focus({preventScroll: true});
+    if ((!level3 || !state.active_input) && document.activeElement === input) input.blur();
+    const name = state.current_screen.replace('_', ' ');
+    canvas.setAttribute('aria-label', 'GENOMICON: ' + name);
+    if (state.current_screen !== lastScreen || state.feedback_message !== lastFeedback) {
+      live.textContent = 'GENOMICON: ' + name + (state.current_screen === 'level3' ? '. ' + state.feedback_message : '');
+      lastScreen = state.current_screen; lastFeedback = state.feedback_message;
+    }
+  }
+
+  function draw() {
+    // Computing controls also reproduces the original shared Back-button update.
+    E.controls(state);
+    ctx.clearRect(0, 0, 900, 600); block(E.rect(0, 0, 900, 600), WHITE);
+    switch (state.current_screen) {
+      case 'main': drawMain(); break;
+      case 'new_game': drawLevelMenu(); break;
+      case 'intro': drawIntro(); break;
+      case 'level1': drawLevel1(); break;
+      case 'level2': drawLevel2(); break;
+      case 'level3': drawLevel3(); break;
+      case 'library': drawLibrary(); break;
+      case 'gallery': drawGallery(); break;
+      case 'milestone': drawMilestones(); break;
+    }
+    syncControls();
+  }
+
+  shell.addEventListener('click', event => {
+    if (event.detail === 0 && event.target.tagName === 'BUTTON') return;
+    const r = canvas.getBoundingClientRect();
+    E.click(state, (event.clientX - r.left) * 900 / r.width, (event.clientY - r.top) * 600 / r.height);
+    draw();
+  });
+  input.addEventListener('input', () => {state.user_input = input.value; state.active_input = true; draw();});
+  function selectInitialBlank() {
+    // The desktop source initializes this field to one space. Select that blank
+    // so normal browser typing replaces it, without changing either answer rule.
+    if (state.user_input === ' ') input.select();
+  }
+  input.addEventListener('focus', () => {state.active_input = true; selectInitialBlank(); scheduleDraw();});
+  input.addEventListener('click', selectInitialBlank);
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault(); E.key(state, 'Enter'); draw();
+    }
+  });
+  function resize() {shell.style.setProperty('--scale', shell.getBoundingClientRect().width / 900);}
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(resize).observe(shell);
+  window.addEventListener('resize', resize);
+  resize();
+  setPosition(input, E.B.input);
+  draw();
+})();
+
+  </script>
+</body>
+</html>
